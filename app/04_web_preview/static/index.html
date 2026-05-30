@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Music Recommendation Preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f7f7f5;
+        color: #1f2933;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 32px 20px;
+      }
+
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+      }
+
+      button {
+        border: 1px solid #b8c0cc;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #1f2933;
+        padding: 8px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #eef2f6;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .status {
+        margin-bottom: 16px;
+        color: #52606d;
+      }
+
+      .list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .track {
+        border: 1px solid #d5d9de;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 16px;
+      }
+
+      .track-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 8px;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .artist,
+      .path,
+      .reason {
+        color: #52606d;
+      }
+
+      .reason {
+        margin-top: 10px;
+      }
+
+      .path {
+        margin-top: 10px;
+        overflow-wrap: anywhere;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+
+      audio {
+        width: 100%;
+        margin-top: 12px;
+      }
+
+      .warning {
+        margin-top: 12px;
+        border-left: 4px solid #c2410c;
+        background: #fff7ed;
+        padding: 10px 12px;
+        color: #7c2d12;
+      }
+
+      .local-note {
+        margin-bottom: 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 12px 14px;
+        color: #475569;
+      }
+
+      .startup-status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .status-pill {
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 5px 10px;
+        color: #475569;
+        font-size: 13px;
+      }
+
+      .status-pill.ok {
+        border-color: #86efac;
+        background: #f0fdf4;
+        color: #166534;
+      }
+
+      .status-pill.missing {
+        border-color: #fdba74;
+        background: #fff7ed;
+        color: #9a3412;
+      }
+
+      .prompt-panel {
+        border: 1px solid #d5d9de;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .prompt-panel h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 180px;
+        resize: vertical;
+        border: 1px solid #b8c0cc;
+        border-radius: 6px;
+        padding: 10px;
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .prompt-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .run-settings {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      label {
+        display: grid;
+        gap: 4px;
+        color: #475569;
+        font-size: 13px;
+      }
+
+      input[type="number"] {
+        width: 110px;
+        border: 1px solid #b8c0cc;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+
+      select {
+        border: 1px solid #b8c0cc;
+        border-radius: 6px;
+        background: #ffffff;
+        padding: 8px 10px;
+        font: inherit;
+      }
+
+      input[type="file"] {
+        max-width: 100%;
+      }
+
+      .history-panel {
+        border: 1px solid #d5d9de;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .history-panel h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .history-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .inline-check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .history-preview {
+        margin-top: 12px;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        border-top: 1px solid #e2e8f0;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #475569;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      td {
+        overflow-wrap: anywhere;
+      }
+
+      .history-preview-empty {
+        color: #64748b;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Recommendation Preview</h1>
+        </div>
+        <div class="actions">
+          <button type="button" id="run">Run Recommendation</button>
+          <button type="button" id="run-random">Random</button>
+          <button type="button" id="reload">Reload</button>
+        </div>
+      </header>
+      <div class="local-note">
+        Audio playback uses the gerbera local server at http://127.0.0.1:8765.
+        音が出ない場合は、gerberaでローカル音声サーバーを起動し、DB上のパスがgerberaから見えるパスか確認してください。
+      </div>
+      <div id="startup-status" class="startup-status"></div>
+      <section class="prompt-panel">
+        <h2>Prompt</h2>
+        <div class="run-settings">
+          <label>
+            Template
+            <select id="prompt-template"></select>
+          </label>
+          <label>
+            Model
+            <select id="model"></select>
+          </label>
+        </div>
+        <textarea id="prompt" spellcheck="false"></textarea>
+        <div class="prompt-actions">
+          <button type="button" id="save-prompt">Save Prompt</button>
+          <span id="prompt-status" class="status"></span>
+        </div>
+        <div class="run-settings">
+          <label>
+            Recommendations
+            <input id="max-recommendations" type="number" min="1" max="20" value="3" />
+          </label>
+          <label>
+            History days
+            <input id="history-days" type="number" min="1" max="365" value="7" />
+          </label>
+          <button type="button" id="history-all">All history</button>
+          <label>
+            Candidate tracks
+            <input id="track-limit" type="number" min="1" max="200" value="20" />
+          </label>
+          <button type="button" id="all-candidates">All candidates</button>
+        </div>
+      </section>
+      <section class="history-panel">
+        <h2>YouTube Music History</h2>
+        <div class="history-actions">
+          <input id="youtube-history-file" type="file" accept=".json,application/json" />
+          <label class="inline-check">
+            <input id="youtube-history-dry-run" type="checkbox" />
+            Dry run
+          </label>
+          <button type="button" id="import-youtube-history">Import</button>
+          <span id="youtube-history-status" class="status"></span>
+        </div>
+        <div id="youtube-history-preview" class="history-preview"></div>
+      </section>
+      <div id="status" class="status">Loading...</div>
+      <section id="list" class="list"></section>
+    </main>
+
+    <script>
+      const localAudioBaseUrl = "http://127.0.0.1:8765";
+      const appBasePath = window.location.pathname.startsWith("/music")
+        ? "/music"
+        : "";
+      const statusEl = document.querySelector("#status");
+      const listEl = document.querySelector("#list");
+      const reloadButton = document.querySelector("#reload");
+      const runButton = document.querySelector("#run");
+      const runRandomButton = document.querySelector("#run-random");
+      const promptEl = document.querySelector("#prompt");
+      const promptTemplateEl = document.querySelector("#prompt-template");
+      const modelEl = document.querySelector("#model");
+      const savePromptButton = document.querySelector("#save-prompt");
+      const promptStatusEl = document.querySelector("#prompt-status");
+      const maxRecommendationsEl = document.querySelector("#max-recommendations");
+      const historyDaysEl = document.querySelector("#history-days");
+      const historyAllButton = document.querySelector("#history-all");
+      const trackLimitEl = document.querySelector("#track-limit");
+      const allCandidatesButton = document.querySelector("#all-candidates");
+      const startupStatusEl = document.querySelector("#startup-status");
+      const youtubeHistoryFileEl = document.querySelector("#youtube-history-file");
+      const youtubeHistoryDryRunEl = document.querySelector("#youtube-history-dry-run");
+      const importYoutubeHistoryButton = document.querySelector("#import-youtube-history");
+      const youtubeHistoryStatusEl = document.querySelector("#youtube-history-status");
+      const youtubeHistoryPreviewEl = document.querySelector("#youtube-history-preview");
+
+      function text(value) {
+        return value == null || value === "" ? "-" : String(value);
+      }
+
+      function apiPath(path) {
+        return `${appBasePath}${path}`;
+      }
+
+      function selectedTemplateId() {
+        return promptTemplateEl.value || "youtube_history";
+      }
+
+      function selectedHistoryDays() {
+        if (historyDaysEl.dataset.allHistory === "true") return null;
+        return Number(historyDaysEl.value || 7);
+      }
+
+      function useAllCandidates() {
+        return trackLimitEl.dataset.allCandidates === "true";
+      }
+
+      function syncModeControls() {
+        historyDaysEl.disabled = false;
+        historyAllButton.disabled = false;
+        trackLimitEl.disabled = useAllCandidates();
+        allCandidatesButton.textContent = useAllCandidates()
+          ? "Use candidate count"
+          : "All candidates";
+      }
+
+      function renderStartupStatus(data) {
+        const keyPill = document.createElement("span");
+        keyPill.className = `status-pill ${data.openai_api_key_configured ? "ok" : "missing"}`;
+        keyPill.textContent = data.openai_api_key_configured
+          ? "OpenAI API key: configured"
+          : "OpenAI API key: missing";
+
+        const dbPill = document.createElement("span");
+        dbPill.className = "status-pill ok";
+        dbPill.textContent = `Oracle: ${data.oracle_user} ${data.oracle_dsn}`;
+
+        startupStatusEl.replaceChildren(keyPill, dbPill);
+      }
+
+      async function loadStartupStatus() {
+        try {
+          const res = await fetch(apiPath("/api/status"));
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          renderStartupStatus(await res.json());
+        } catch (error) {
+          const pill = document.createElement("span");
+          pill.className = "status-pill missing";
+          pill.textContent = `Startup status unavailable: ${error.message}`;
+          startupStatusEl.replaceChildren(pill);
+        }
+      }
+
+      function render(items) {
+        listEl.replaceChildren();
+        statusEl.textContent = `${items.length} recommendation(s)`;
+        const audioElements = [];
+
+        for (const item of items) {
+          const card = document.createElement("article");
+          card.className = "track";
+
+          const header = document.createElement("div");
+          header.className = "track-header";
+          header.innerHTML = `
+            <div>
+              <div class="title">#${item.rank_no} ${text(item.title)}</div>
+              <div class="artist">${text(item.artist)}</div>
+            </div>
+            <div>source ${item.track_source_id}</div>
+          `;
+          card.appendChild(header);
+
+          const reason = document.createElement("div");
+          reason.className = "reason";
+          reason.textContent = text(item.reason);
+          card.appendChild(reason);
+
+          const path = document.createElement("div");
+          path.className = "path";
+          path.textContent = item.file_path_windows || item.file_path_linux || "";
+          card.appendChild(path);
+
+          const playablePath = item.file_path_linux || item.file_path_windows;
+          if (playablePath) {
+            const audio = document.createElement("audio");
+            audio.controls = true;
+            audio.preload = "metadata";
+            audio.src = `${localAudioBaseUrl}/audio?path=${encodeURIComponent(playablePath)}`;
+            card.appendChild(audio);
+            audioElements.push(audio);
+          }
+
+          listEl.appendChild(card);
+        }
+
+        audioElements.forEach((audio, index) => {
+          audio.addEventListener("play", () => {
+            audioElements.forEach((other) => {
+              if (other !== audio) other.pause();
+            });
+          });
+          audio.addEventListener("ended", async () => {
+            const next = audioElements[index + 1];
+            if (!next) return;
+            try {
+              next.scrollIntoView({ behavior: "smooth", block: "center" });
+              await next.play();
+            } catch (error) {
+              statusEl.textContent = `Next track is ready. Press play if the browser blocked autoplay.`;
+            }
+          });
+        });
+      }
+
+      async function loadLatest() {
+        statusEl.textContent = "Loading latest recommendation...";
+        try {
+          const res = await fetch(apiPath("/api/recommendations/latest"));
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          render(await res.json());
+        } catch (error) {
+          statusEl.textContent = `Failed to load: ${error.message}`;
+          listEl.replaceChildren();
+        }
+      }
+
+      async function loadRandomInitial() {
+        statusEl.textContent = "Loading random tracks...";
+        try {
+          const res = await fetch(apiPath("/api/recommendations/random?limit=10"));
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          render(await res.json());
+        } catch (error) {
+          statusEl.textContent = `Failed to load random tracks: ${error.message}`;
+          listEl.replaceChildren();
+        }
+      }
+
+      async function loadPromptTemplates() {
+        promptStatusEl.textContent = "Loading prompt...";
+        try {
+          const res = await fetch(apiPath("/api/prompt-templates"));
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const data = await res.json();
+          promptTemplateEl.replaceChildren();
+          for (const template of data.templates) {
+            const option = document.createElement("option");
+            option.value = template.id;
+            option.textContent = template.label;
+            promptTemplateEl.appendChild(option);
+          }
+          promptTemplateEl.value = data.default_template_id || "youtube_history";
+          const selected = data.templates.find((item) => item.id === promptTemplateEl.value);
+          promptEl.value = selected ? selected.prompt : "";
+          promptStatusEl.textContent = "";
+        } catch (error) {
+          promptStatusEl.textContent = `Failed to load prompt: ${error.message}`;
+        }
+      }
+
+      async function loadModels() {
+        try {
+          const res = await fetch(apiPath("/api/models"));
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const data = await res.json();
+          modelEl.replaceChildren();
+          for (const model of data.models) {
+            const option = document.createElement("option");
+            option.value = model;
+            option.textContent = model;
+            modelEl.appendChild(option);
+          }
+          modelEl.value = data.default_model || "gpt-4.1-mini";
+        } catch (error) {
+          const option = document.createElement("option");
+          option.value = "gpt-4.1-mini";
+          option.textContent = "gpt-4.1-mini";
+          modelEl.replaceChildren(option);
+        }
+      }
+
+      async function loadSelectedPromptTemplate() {
+        promptStatusEl.textContent = "Loading prompt...";
+        try {
+          const res = await fetch(apiPath(`/api/prompt-templates/${selectedTemplateId()}`));
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const data = await res.json();
+          promptEl.value = data.prompt;
+          promptStatusEl.textContent = "";
+        } catch (error) {
+          promptStatusEl.textContent = `Failed to load prompt: ${error.message}`;
+        }
+      }
+
+      async function savePrompt() {
+        savePromptButton.disabled = true;
+        promptStatusEl.textContent = "Saving...";
+        try {
+          const res = await fetch(apiPath(`/api/prompt-templates/${selectedTemplateId()}`), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: promptEl.value }),
+          });
+          if (!res.ok) {
+            const detail = await res.text();
+            throw new Error(`${res.status} ${detail}`);
+          }
+          promptStatusEl.textContent = "Saved";
+        } catch (error) {
+          promptStatusEl.textContent = `Failed to save: ${error.message}`;
+        } finally {
+          savePromptButton.disabled = false;
+        }
+      }
+
+      async function runRecommendation() {
+        runButton.disabled = true;
+        statusEl.textContent = "Running recommendation...";
+        try {
+          await savePrompt();
+          const res = await fetch(apiPath("/api/recommendations/run"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              history_limit: 20,
+              history_days: selectedHistoryDays(),
+              track_limit: Number(trackLimitEl.value || 20),
+              max_recommendations: Number(maxRecommendationsEl.value || 3),
+              input_source: "youtube_music",
+              target_source: "local",
+              model: modelEl.value,
+              random_library_sample: false,
+              use_history: true,
+              recommendation_mode: "youtube_history",
+              prompt_template_id: selectedTemplateId(),
+              use_all_candidates: useAllCandidates(),
+            }),
+          });
+          if (!res.ok) {
+            const detail = await res.text();
+            throw new Error(`${res.status} ${detail}`);
+          }
+          const result = await res.json();
+          statusEl.textContent = `Saved ${result.saved_logs} recommendation(s)`;
+          await loadLatest();
+        } catch (error) {
+          statusEl.textContent = `Failed to run: ${error.message}`;
+        } finally {
+          runButton.disabled = false;
+        }
+      }
+
+      async function runRandomRecommendation() {
+        runRandomButton.disabled = true;
+        statusEl.textContent = "Choosing random tracks...";
+        try {
+          const res = await fetch(apiPath("/api/recommendations/run"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              max_recommendations: Number(maxRecommendationsEl.value || 3),
+              input_source: "youtube_music",
+              target_source: "local",
+              recommendation_mode: "random",
+            }),
+          });
+          if (!res.ok) {
+            const detail = await res.text();
+            throw new Error(`${res.status} ${detail}`);
+          }
+          const result = await res.json();
+          statusEl.textContent = `Saved ${result.saved_logs} random recommendation(s)`;
+          await loadLatest();
+        } catch (error) {
+          statusEl.textContent = `Failed to choose random tracks: ${error.message}`;
+        } finally {
+          runRandomButton.disabled = false;
+        }
+      }
+
+      function renderYoutubeHistoryPreview(rows) {
+        youtubeHistoryPreviewEl.replaceChildren();
+        if (!rows || rows.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "history-preview-empty";
+          empty.textContent = "No YouTube Music rows found.";
+          youtubeHistoryPreviewEl.appendChild(empty);
+          return;
+        }
+
+        const table = document.createElement("table");
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Action</th>
+              <th>Match</th>
+              <th>Played at</th>
+              <th>Title</th>
+              <th>Artist</th>
+              <th>Track</th>
+              <th>URL</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+        const tbody = table.querySelector("tbody");
+        for (const row of rows) {
+          const tr = document.createElement("tr");
+          const values = [
+            row.row_no,
+            row.action,
+            row.match_status,
+            row.played_at,
+            row.raw_title,
+            row.raw_artist,
+            `${text(row.track_id)} / ${text(row.track_source_id)}`,
+          ];
+          for (const value of values) {
+            const td = document.createElement("td");
+            td.textContent = text(value);
+            tr.appendChild(td);
+          }
+          const urlTd = document.createElement("td");
+          if (row.source_url) {
+            const link = document.createElement("a");
+            link.href = row.source_url;
+            link.target = "_blank";
+            link.rel = "noreferrer";
+            link.textContent = "open";
+            urlTd.appendChild(link);
+          } else {
+            urlTd.textContent = "-";
+          }
+          tr.appendChild(urlTd);
+          tbody.appendChild(tr);
+        }
+        youtubeHistoryPreviewEl.appendChild(table);
+      }
+
+      async function importYoutubeHistory() {
+        const file = youtubeHistoryFileEl.files[0];
+        if (!file) {
+          youtubeHistoryStatusEl.textContent = "Select watch-history.json";
+          return;
+        }
+
+        importYoutubeHistoryButton.disabled = true;
+        youtubeHistoryStatusEl.textContent = "Importing...";
+        try {
+          const content = await file.text();
+          const res = await fetch(apiPath("/api/youtube-history/import"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filename: file.name,
+              content,
+              dry_run: youtubeHistoryDryRunEl.checked,
+            }),
+          });
+          if (!res.ok) {
+            const detail = await res.text();
+            throw new Error(`${res.status} ${detail}`);
+          }
+          const result = await res.json();
+          youtubeHistoryStatusEl.textContent =
+            `YouTube Music ${result.youtube_music_items}, inserted ${result.inserted}, ` +
+            `matched ${result.matched}, duplicates ${result.skipped_duplicates}` +
+            `${result.dry_run ? " (dry run)" : ""}`;
+          renderYoutubeHistoryPreview(result.preview_rows);
+          await loadStartupStatus();
+          await loadRandomInitial();
+        } catch (error) {
+          youtubeHistoryStatusEl.textContent = `Failed to import: ${error.message}`;
+        } finally {
+          importYoutubeHistoryButton.disabled = false;
+        }
+      }
+
+      reloadButton.addEventListener("click", loadRandomInitial);
+      savePromptButton.addEventListener("click", savePrompt);
+      runButton.addEventListener("click", runRecommendation);
+      runRandomButton.addEventListener("click", runRandomRecommendation);
+      promptTemplateEl.addEventListener("change", loadSelectedPromptTemplate);
+      historyDaysEl.addEventListener("input", () => {
+        historyDaysEl.dataset.allHistory = "false";
+      });
+      historyAllButton.addEventListener("click", () => {
+        historyDaysEl.dataset.allHistory = "true";
+        historyDaysEl.value = "";
+      });
+      trackLimitEl.addEventListener("input", () => {
+        trackLimitEl.dataset.allCandidates = "false";
+        syncModeControls();
+      });
+      allCandidatesButton.addEventListener("click", () => {
+        trackLimitEl.dataset.allCandidates =
+          useAllCandidates() ? "false" : "true";
+        syncModeControls();
+      });
+      importYoutubeHistoryButton.addEventListener("click", importYoutubeHistory);
+      loadStartupStatus();
+      loadPromptTemplates();
+      loadModels();
+      syncModeControls();
+      loadRandomInitial();
+    </script>
+  </body>
+</html>

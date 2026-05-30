@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.zip
+*.dmp
+*.log
+watch-history.json
+*.mp3
+*.m4a
+*.flac
+*.wav
+*.aac
+*.ogg
+*.wma

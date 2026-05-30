@@ -1,0 +1,17 @@
+[Unit]
+Description=Oracle music recommendation FastAPI app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/opt/music-app/oracle/cloud_lift/app
+EnvironmentFile=-/opt/music-app/oracle/cloud_lift/app/.env
+ExecStart=/opt/music-app/oracle/cloud_lift/app/.venv/bin/uvicorn 04_web_preview.app:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
