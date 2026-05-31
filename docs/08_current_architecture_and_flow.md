@@ -1,6 +1,6 @@
 # Cloud Architecture and Processing Flow
 
-この資料はクラウド移行対象の構成と、画面操作ごとの処理内容を説明します。
+この資料は2026-05-31に稼働確認したクラウド構成と、画面操作ごとの処理内容を説明します。
 
 ## 1. System Overview
 

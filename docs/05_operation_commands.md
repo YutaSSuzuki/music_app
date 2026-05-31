@@ -29,12 +29,6 @@ sudo systemctl restart music-app-web.service
 sudo systemctl reload apache2
 ```
 
-Amazon LinuxでApacheがhttpdの場合:
-
-```bash
-sudo systemctl reload httpd
-```
-
 Hosted audio確認:
 
 ```bash
@@ -44,6 +38,12 @@ set -a
 . app/.env
 set +a
 python3 deploy/python_ec2/check_hosted_audio.py
+```
+
+ディスク空き容量:
+
+```bash
+df -h / /data/music-app/audio
 ```
 
 ## Oracle EC2

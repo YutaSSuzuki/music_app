@@ -1,44 +1,35 @@
-# SQL メモ
+# SQL
 
-## 初期PoC構成
+## Current Schema
 
-- `artists`: アーティスト名の正規化用マスタ
-- `tracks`: 手元の曲マスタ
-- `play_history_youtube`: YouTube Music 再生履歴
-- `play_history_sony`: Sony Music Center 再生履歴
-- `track_features`: BPM、キー、ジャンル、ムードなど
-- `track_tags`: 任意タグ
-- `recommendation_logs`: 推薦結果の保存
+- `002_revised_schema.sql`: 現行DDL
+- `003_hosted_audio_files.sql`: AP EC2から配信する音源パスの追加DDL
 
-## 補足
+主要テーブル:
 
-- `albums` は今は入れていません
-- アルバム単位で扱いたくなったら後から追加できます
-- 履歴テーブルには `raw_title`, `raw_artist` を持たせています
-  - これは手元曲にまだ一致しない履歴も保存するためです
+- `tracks`
+- `artists`
+- `track_artists`
+- `track_sources`
+- `play_events`
+- `track_features`
+- `track_tags`
+- `recommendation_runs`
+- `recommendation_items`
+- `hosted_audio_files`
 
-## ファイル
+クラウド版ではgerbera音声API用の `local_audio_files` を使用しません。
 
-- `001_initial_schema.sql`: 初期PoC DDL
-- `002_revised_schema.sql`: 双方向推薦に対応する改訂DDL
-- `003_seed_phase1_mock.sql`: 改訂DDL用の最小モックデータ
-- `003_hosted_audio_files.sql`: Web APIサーバー自身から配信する音源パスの追加DDL
-- `004_seed_cloud_smoke_test.sql`: クラウド疎通確認用の3曲
-- `005_delete_cloud_smoke_test.sql`: 疎通確認用3曲の削除
+## Smoke Test
 
-## 改訂構成
+- `004_seed_cloud_smoke_test.sql`: 配信確認用の3曲を登録
+- `005_delete_cloud_smoke_test.sql`: 配信確認用の3曲を削除
 
-今後はYouTube Music履歴からローカル曲を推薦するだけでなく、ローカル再生履歴からYouTube Music側のおすすめを作る可能性がある。
+## Data Migration
 
-そのため、履歴テーブルをサービスごとに分けず、以下の共通構成にする。
+- `006_export_cloud_dump_with_dbms_datapump.sql`: liteコンテナから全件dumpを出力
+- `007_prepare_cloud_dump_export.sql`: Data Pump権限付与と残存ジョブ削除
+- `008_reset_cloud_import_target.sql`: 再import前の対象DB初期化と外部キー無効化
+- `009_enable_cloud_import_constraints.sql`: import後の外部キー有効化と整合性検証
 
-- `tracks`: 曲そのもの
-- `artists`: アーティスト
-- `track_artists`: 曲とアーティストの対応
-- `track_sources`: 曲が存在する場所。`local`, `youtube_music`, `sony_music_center`
-- `play_events`: 再生履歴。YouTube Music、ローカル、Sonyなどを `source_name` で区別
-- `track_features`: BPM、キー、ジャンルなど
-- `track_tags`: 任意タグ
-- `recommendation_runs`: 推薦実行単位
-- `recommendation_items`: 推薦された曲
-- `hosted_audio_files`: Python EC2から配信する所有音源ファイル
+再構築手順は `docs/01_oracle_ec2_setup.md` を参照してください。

@@ -69,10 +69,13 @@ track_source_id<TAB>track_id<TAB>original_path
 zephy上の `/home/codex/work/oracle/hosted_audio/...` です。このパスをOracle EC2へ
 dumpで引き継ぎません。
 
-zephy DBからTSVを出力するSQL*Plusコマンド:
+zephy DBからTSVを出力します。zephyではOracleをpodmanコンテナ `oracle-free` で
+動かしているため、zephy上で次を実行します。
 
 ```bash
-sqlplus -s music_app_v2/<password>@//localhost:1521/FREEPDB1 <<'SQL'
+podman exec -i oracle-free \
+  /opt/oracle/product/26ai/dbhomeFree/bin/sqlplus \
+  -s music_app_v2/<password>@//localhost:1521/FREEPDB1 <<'SQL'
 SET HEADING OFF
 SET FEEDBACK OFF
 SET PAGESIZE 0
@@ -90,6 +93,9 @@ ORDER BY track_source_id;
 SPOOL OFF
 EXIT
 SQL
+
+podman cp oracle-free:/tmp/hosted_audio_manifest_db.tsv \
+  /tmp/hosted_audio_manifest_db.tsv
 ```
 
 転送元端末へTSVを置き、実ファイルの存在確認と容量取得を行います。
@@ -113,6 +119,9 @@ track_source_id<TAB>track_id<TAB>original_path<TAB>file_size_bytes
 TSVにはローカル音源パスが含まれます。Gitへ登録しないでください。
 
 ## 5. Transfer
+
+先に `docs/01_oracle_ec2_setup.md` のDB Data Migrationを完了させます。この時点では
+`HOSTED_AUDIO_FILES=0` が正常です。
 
 転送元端末で実行します。
 

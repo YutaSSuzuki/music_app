@@ -1,78 +1,73 @@
 # Oracle Music App Cloud Lift
 
-このディレクトリは、現在のローカル/zephy版アプリをAWSへ段階移行するための資料と必要ファイルをまとめたものです。
-
-最初の移行先は、Lambdaではなく次の2台EC2構成にします。
+AWSへのクラウドリフトは完了しています。現在は次の2台EC2構成です。
 
 ```text
 Browser
   |
-  | http://python-ec2/music/
+  | http://<ap-public-ip>/music/
   v
-Python EC2
+AP EC2 (Ubuntu)
   - Apache
-  - FastAPI / uvicorn
+  - FastAPI / uvicorn systemd
   - OpenAI API call
-  - hosted audio files
+  - /data/music-app/audio/
   |
   | Oracle Net 1521
   v
-Oracle EC2
+Oracle EC2 (RHEL 9)
   - Oracle AI Database 26ai Free RPM installation
+  - FREEPDB1 / MUSIC_APP_V2
 ```
 
-この段階でWeb画面、DB接続、AI推薦、YouTube履歴取り込み、音声配信まで確認します。  
-その後に、画面をS3へ、APIをLambda/API Gatewayへ移します。
+gerbera音声APIとzephy固有の音源パスはクラウド版で使用しません。AP EC2に配置した
+音源をFastAPIからHTTP Range対応で配信します。
+
+## Validated State
+
+2026-05-31に次を確認済みです。
+
+- Apache経由の画面表示
+- AP EC2からOracle EC2への接続
+- DBからのrandom推薦
+- OpenAI APIを使うAI推薦
+- YouTube Music履歴を含むDB移行
+- 音源644件、3.15 GiBの転送とDB登録
+- 音声再生、連続再生、HTTP `206 Partial Content`
+
+詳細は `docs/07_current_state.md` を参照してください。
 
 ## Directory
 
 ```text
 cloud_lift/
-  app/                         current application files
-  data/                        local library registration ledger
+  app/                         FastAPI、Web画面、推薦、履歴取り込み
   deploy/
-    python_ec2/                Apache/systemd/env/bootstrap examples
-    oracle_ec2/                Oracle Linux 9 RPM setup and legacy container examples
-    client/                    Windows client helper
-    source/                    source audio manifest helper
-  docs/                        migration documents
-  sql/                         Oracle schema SQL
+    python_ec2/                Ubuntu AP EC2用の設定と音源登録スクリプト
+    oracle_ec2/                Oracle EC2用のRPMセットアップ補助
+    source/                    転送前音源manifest作成
+  docs/                        構築、運用、将来移行の手順書
+  sql/                         DDL、疎通確認、Data Pump補助SQL
 ```
 
-## First Target
+## Start Here
 
-まず目指す状態:
-
-- Python EC2で `http://<public-ip-or-domain>/music/` が開ける
-- Python EC2のFastAPIからOracle EC2へ接続できる
-- 初期表示でDBランダム10曲が出る
-- Random推薦が保存される
-- YouTube履歴のDry run/importが動く
-- OpenAI APIキー設定後にAI推薦が動く
-- 音声ファイルをPython EC2から配信できる
-- Python EC2上の音源だけを候補にしてAI推薦できる
-
-## Important Files
-
-- Web API: `app/04_web_preview/app.py`
-- Web UI: `app/04_web_preview/static/index.html`
-- Recommendation logic: `app/03_matching_recommendation/phase1_cli.py`
-- YouTube import: `app/01_youtube_history/youtube_takeout_import.py`
-- DB schema: `sql/002_revised_schema.sql`
-- Hosted audio schema: `sql/003_hosted_audio_files.sql`
-- Hosted audio cloud guide: `docs/09_hosted_audio_cloud_setup.md`
-- Tested zephy hosted state: `docs/10_zephy_hosted_audio_state.md`
-- Python EC2 guide: `docs/02_python_ec2_setup.md`
-- Oracle EC2 guide: `docs/01_oracle_ec2_setup.md`
-- Migration order: `docs/00_migration_plan.md`
+- 現在状態: `docs/07_current_state.md`
+- Oracle EC2再構築: `docs/01_oracle_ec2_setup.md`
+- AP EC2再構築: `docs/02_python_ec2_setup.md`
+- 音源の再転送とDB登録: `docs/09_hosted_audio_cloud_setup.md`
+- 日常運用: `docs/05_operation_commands.md`
+- 将来のS3/Lambda移行: `docs/06_next_lambda_s3.md`
+- 次週以降の改修バックログ: `docs/10_next_iteration_backlog.md`
 
 ## Files Not Included
 
-以下はGitHubへアップロードしない前提です。
+次はGitHubへ登録しません。
 
 - `.env`
 - OpenAI API key
-- Oracle password with real value
-- YouTube Takeout raw `watch-history.json`
+- Oracle password
+- YouTube Takeoutの `watch-history.json`
 - 音源ファイル本体
-- Oracle database dump containing personal history, unless private repository/storage is used
+- Oracle dump
+- 音源manifest TSV

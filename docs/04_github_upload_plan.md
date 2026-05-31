@@ -6,13 +6,13 @@
 - `cloud_lift/deploy/`
 - `cloud_lift/docs/`
 - `cloud_lift/sql/`
-- `cloud_lift/data/local_library_registration_plan_after_import/`
 
 ## GitHubに置かないもの
 
 - `.env`
 - `watch-history.json`
 - Oracle dump file
+- 音源manifest TSV
 - OpenAI API key
 - Oracle password
 - 音源ファイル
@@ -27,7 +27,7 @@ git clone <YOUR_REPOSITORY_URL> music_app
 cd music_app
 ```
 
-その後:
+その後は `docs/02_python_ec2_setup.md` に従います。
 
 ```bash
 python3 -m venv .venv

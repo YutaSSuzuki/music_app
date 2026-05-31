@@ -27,18 +27,21 @@ RPMインストールでは `/opt` 配下に約9GBの空き容量も必要です
 
 ## 2. RPM Download
 
-Oracle公式ページから、Oracle Linux 9 x86-64向けの最新RPMをダウンロードします。
+Oracle公式ページから、EL9 x86-64向けのpreinstall RPMとDatabase Free RPMを
+ダウンロードします。RHEL 10ではEL8向けpreinstall RPMの依存関係を解決できなかった
+ため、RHEL 9またはOracle Linux 9を使用します。
 
 ```text
 https://www.oracle.com/database/free/get-started/
 ```
 
-取得したRPMをOracle EC2の `/tmp` へ転送します。
+取得した2つのRPMをOracle EC2の `/tmp` へ転送します。
 
 例:
 
 ```bash
-scp oracle-ai-database-free-26ai-*.el9.x86_64.rpm \
+scp oracle-ai-database-preinstall-26ai-*.el9.x86_64.rpm \
+  oracle-ai-database-free-26ai-*.el9.x86_64.rpm \
   ec2-user@<oracle-ec2-public-ip>:/tmp/
 ```
 
@@ -54,11 +57,18 @@ ssh ec2-user@<oracle-ec2-public-ip>
 
 ```bash
 sudo dnf update -y
-sudo dnf install -y oracle-database-preinstall* #Linux9の場合プリインストールが必要
-sudo dnf install -y /tmp/oracle-ai-database-free-26ai-*.el9.x86_64.rpm #Oracle本体のインストール
+sudo dnf install -y /tmp/oracle-ai-database-preinstall-26ai-*.el9.x86_64.rpm
+sudo dnf install -y /tmp/oracle-ai-database-free-26ai-*.el9.x86_64.rpm
 ```
 
 preinstall RPMは、`oracle` ユーザー、必要なグループ、カーネル設定などを準備します。
+同じ処理は、RPMのファイル名を引数にして実行できます。
+
+```bash
+bash deploy/oracle_ec2/bootstrap_oracle_linux_9.sh \
+  /tmp/oracle-ai-database-preinstall-26ai-*.el9.x86_64.rpm \
+  /tmp/oracle-ai-database-free-26ai-*.el9.x86_64.rpm
+```
 
 ## 4. Configure Database
 
@@ -334,13 +344,89 @@ dumpにはYouTube履歴やローカル音源パスが含まれるため、GitHub
 `HOSTED_AUDIO_FILES` にはzephy固有のパスが入っているため、dumpから除外します。
 Python EC2へ音源を転送した後に登録スクリプトで再生成します。
 
+zephyではOracleをpodmanコンテナ `oracle-free` で動かしています。使用中の
+`container-registry.oracle.com/database/free:latest-lite` イメージには `expdp`
+コマンドが含まれません。SQL*Plusから `DBMS_DATAPUMP` を呼び出します。
+
+ローカルPCからSQLファイルをzephyへ転送します。
+
 ```bash
-expdp music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
-  schemas=music_app_v2 \
-  directory=DATA_PUMP_DIR \
-  dumpfile=music_app_v2_cloud.dmp \
-  logfile=music_app_v2_cloud_exp.log \
-  exclude=TABLE:\"IN \(\'LOCAL_AUDIO_FILES\',\'HOSTED_AUDIO_FILES\'\)\"
+scp sql/006_export_cloud_dump_with_dbms_datapump.sql \
+  zephy-codex:/tmp/
+scp sql/007_prepare_cloud_dump_export.sql \
+  zephy-codex:/tmp/
+```
+
+zephyで実行します。
+
+```bash
+ssh zephy-codex
+podman cp /tmp/006_export_cloud_dump_with_dbms_datapump.sql \
+  oracle-free:/tmp/
+podman cp /tmp/007_prepare_cloud_dump_export.sql \
+  oracle-free:/tmp/
+podman exec -it oracle-free bash
+```
+
+SYSDBAでアプリユーザーへData Pumpディレクトリ権限を付与し、前回失敗した
+Data Pumpジョブがあれば削除します。
+
+```bash
+/opt/oracle/product/26ai/dbhomeFree/bin/sqlplus / as sysdba
+```
+
+```sql
+@/tmp/007_prepare_cloud_dump_export.sql
+EXIT
+```
+
+コンテナ内で実行します。
+
+```bash
+# 同名dumpが残っている場合は、先に別名へ退避または削除します。
+/opt/oracle/product/26ai/dbhomeFree/bin/sqlplus \
+  music_app_v2/<zephy-db-password>@//localhost:1521/FREEPDB1 \
+  @/tmp/006_export_cloud_dump_with_dbms_datapump.sql
+```
+
+成功時は次のように表示されます。
+
+```text
+Data Pump job state: COMPLETED
+```
+
+dumpの出力先を確認します。
+
+```bash
+/opt/oracle/product/26ai/dbhomeFree/bin/sqlplus / as sysdba
+```
+
+```sql
+ALTER SESSION SET CONTAINER = FREEPDB1;
+SELECT directory_path
+FROM dba_directories
+WHERE directory_name = 'DATA_PUMP_DIR';
+EXIT
+```
+
+コンテナから抜け、表示されたパスを使ってdumpをzephyへ取り出します。
+
+```bash
+exit
+podman cp \
+  oracle-free:<表示されたDATA_PUMP_DIR>/music_app_v2_cloud.dmp \
+  /tmp/music_app_v2_cloud.dmp
+ls -lh /tmp/music_app_v2_cloud.dmp
+sha256sum /tmp/music_app_v2_cloud.dmp
+exit
+```
+
+ローカルPCを中継してOracle EC2へ転送します。dumpはGitHubへ登録しません。
+
+```bash
+scp zephy-codex:/tmp/music_app_v2_cloud.dmp /tmp/
+sha256sum /tmp/music_app_v2_cloud.dmp
+scp /tmp/music_app_v2_cloud.dmp oracle:/tmp/
 ```
 
 Oracle EC2でData Pumpディレクトリを確認します。
@@ -366,6 +452,36 @@ EXIT
 dumpを、表示された `DATA_PUMP_DIR` のOSパスへ配置し、`oracle` ユーザーから
 読めるようにします。
 
+```bash
+exit
+sudo cp /tmp/music_app_v2_cloud.dmp <表示されたDATA_PUMP_DIR>/
+sudo chown oracle:oinstall <表示されたDATA_PUMP_DIR>/music_app_v2_cloud.dmp
+sudo su - oracle
+```
+
+初回のみ、Oracle EC2側でもアプリユーザーへData Pumpディレクトリ権限を付与します。
+
+```bash
+sqlplus / as sysdba
+```
+
+```sql
+ALTER SESSION SET CONTAINER = FREEPDB1;
+GRANT READ, WRITE ON DIRECTORY DATA_PUMP_DIR TO music_app_v2;
+EXIT
+```
+
+既存DDLには外部キーがあります。`DATA_ONLY` importではテーブル処理順序を保証
+できないため、import前にクラウドDBのデータを初期化して外部キーを一時無効化します。
+これは新規Oracle EC2に対してのみ実行します。
+
+```bash
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/008_reset_cloud_import_target.sql
+```
+
+全テーブルが `0` 件になったことを確認します。
+
 import例:
 
 ```bash
@@ -377,6 +493,15 @@ impdp music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
   content=DATA_ONLY \
   table_exists_action=APPEND
 ```
+
+import後に外部キーを再有効化し、整合性を検証します。
+
+```bash
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/009_enable_cloud_import_constraints.sql
+```
+
+すべての外部キーが `ENABLED` かつ `VALIDATED` であることを確認します。
 
 先にDDLを適用済みのため、`content=DATA_ONLY` でデータのみを投入します。
 サンプルデータが残っている状態では実行しません。移行方法によっては、import前に

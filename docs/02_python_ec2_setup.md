@@ -4,6 +4,7 @@
 
 - Instance: `t3.small` or `t3.medium`
 - OS: Ubuntu
+- EBS: gp3 20GB以上
 - Security Group:
   - HTTP 80: 自分のIPまたは利用範囲
   - SSH管理ポート: 自分のIPのみ
@@ -138,15 +139,11 @@ sudo systemctl enable --now music-app-web.service
 sudo systemctl status music-app-web.service
 ```
 
-このserviceファイルはUbuntuの `/home/ubuntu/music_app` 配置用です。Amazon Linuxで
-使用する場合は、`User`、`Group`、`WorkingDirectory`、`EnvironmentFile`、
-`ExecStart` を実際の配置先へ変更します。
+このserviceファイルはUbuntuの `/home/ubuntu/music_app` 配置用です。
 
 ## Apache
 
 `deploy/python_ec2/music-app-apache.conf` をApacheへ配置します。
-
-Ubuntu:
 
 ```bash
 sudo a2enmod proxy proxy_http headers
@@ -154,13 +151,6 @@ sudo cp deploy/python_ec2/music-app-apache.conf /etc/apache2/conf-available/musi
 sudo a2enconf music-app
 sudo apache2ctl configtest
 sudo systemctl reload apache2
-```
-
-Amazon Linux系:
-
-```bash
-sudo cp deploy/python_ec2/music-app-apache.conf /etc/httpd/conf.d/music-app.conf
-sudo systemctl reload httpd
 ```
 
 ## Browser
