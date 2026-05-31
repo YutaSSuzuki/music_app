@@ -107,3 +107,5 @@ sudo systemctl reload httpd
 http://<python-ec2-public-ip>/music/
 ```
 
+Python EC2自身から音源を配信する場合は、`docs/09_hosted_audio_cloud_setup.md`
+の手順で `hosted_audio_files` と音源ディレクトリを準備します。

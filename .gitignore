@@ -14,3 +14,4 @@ watch-history.json
 *.aac
 *.ogg
 *.wma
+hosted_audio_manifest*.tsv

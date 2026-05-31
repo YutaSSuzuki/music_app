@@ -59,8 +59,8 @@ def health() -> dict[str, Any]:
             "track_sources": fetch_one_value(
                 conn, "SELECT COUNT(*) FROM track_sources"
             ),
-            "local_audio_files": fetch_one_value(
-                conn, "SELECT COUNT(*) FROM local_audio_files"
+            "hosted_audio_files": fetch_one_value(
+                conn, "SELECT COUNT(*) FROM hosted_audio_files"
             ),
             "youtube_music_events": fetch_one_value(
                 conn,
@@ -159,16 +159,15 @@ def library_tracks(
                 AS normalized_artist,
             ts.source_name,
             ts.source_url,
-            MAX(laf.file_path_linux) AS file_path_linux,
-            MAX(laf.file_path_windows) AS file_path_windows,
+            MAX(haf.file_path_linux) AS file_path_linux,
             COUNT(pe.play_event_id) AS play_count
         FROM tracks t
         JOIN track_sources ts ON ts.track_id = t.track_id
         JOIN track_artists ta ON ta.track_id = t.track_id
         JOIN artists a ON a.artist_id = ta.artist_id
-        LEFT JOIN local_audio_files laf
-          ON laf.track_source_id = ts.track_source_id
-         AND laf.is_available = 1
+        LEFT JOIN hosted_audio_files haf
+          ON haf.track_source_id = ts.track_source_id
+         AND haf.is_available = 1
         LEFT JOIN play_events pe
           ON pe.track_id = t.track_id
          AND pe.source_name = :input_source
@@ -179,9 +178,9 @@ def library_tracks(
               :target_source <> 'local'
               OR EXISTS (
                   SELECT 1
-                  FROM local_audio_files laf_exists
-                  WHERE laf_exists.track_source_id = ts.track_source_id
-                    AND laf_exists.is_available = 1
+                  FROM hosted_audio_files haf_exists
+                  WHERE haf_exists.track_source_id = ts.track_source_id
+                    AND haf_exists.is_available = 1
               )
           )
         GROUP BY
@@ -211,7 +210,6 @@ def library_tracks(
             source_name,
             source_url,
             file_path_linux,
-            file_path_windows,
             play_count
         FROM deduped_tracks
         WHERE source_rank = 1
@@ -238,8 +236,7 @@ def library_tracks(
                 "target_source": row[6],
                 "source_url": row[7],
                 "file_path_linux": row[8],
-                "file_path_windows": row[9],
-                "play_count": row[10],
+                "play_count": row[9],
                 "tags": [],
             }
             for row in cur
@@ -256,9 +253,9 @@ def library_track_count(conn: oracledb.Connection, target_source: str) -> int:
               :target_source <> 'local'
               OR EXISTS (
                   SELECT 1
-                  FROM local_audio_files laf_exists
-                  WHERE laf_exists.track_source_id = ts.track_source_id
-                    AND laf_exists.is_available = 1
+                  FROM hosted_audio_files haf_exists
+                  WHERE haf_exists.track_source_id = ts.track_source_id
+                    AND haf_exists.is_available = 1
               )
           )
     """

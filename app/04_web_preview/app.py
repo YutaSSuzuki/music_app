@@ -181,9 +181,7 @@ def row_to_item(row: tuple[Any, ...]) -> dict[str, Any]:
         "title": row[3],
         "track_source_id": track_source_id,
         "artist": row[5],
-        "file_path_linux": file_path_linux,
-        "file_path_windows": row[7],
-        "reason": row[8],
+        "reason": row[7],
         "audio_url": f"/tracks/{track_source_id}/audio",
         "file_exists_on_server": file_exists_on_server,
     }
@@ -199,8 +197,6 @@ def random_row_to_item(row: tuple[Any, ...], rank_no: int) -> dict[str, Any]:
         "title": row[1],
         "track_source_id": track_source_id,
         "artist": row[3],
-        "file_path_linux": file_path_linux,
-        "file_path_windows": row[6],
         "reason": "DBからランダムに選出しました。",
         "audio_url": f"/tracks/{track_source_id}/audio",
         "file_exists_on_server": bool(file_path_linux and Path(file_path_linux).is_file()),
@@ -365,8 +361,7 @@ def latest_recommendations() -> list[dict[str, Any]]:
             t.title,
             ri.track_source_id,
             LISTAGG(a.name, ', ') WITHIN GROUP (ORDER BY ta.artist_order) AS artist,
-            laf.file_path_linux,
-            laf.file_path_windows,
+            haf.file_path_linux,
             ri.reason_text
         FROM recommendation_runs rr
         JOIN recommendation_items ri
@@ -377,8 +372,8 @@ def latest_recommendations() -> list[dict[str, Any]]:
           ON ta.track_id = t.track_id
         JOIN artists a
           ON a.artist_id = ta.artist_id
-        LEFT JOIN local_audio_files laf
-          ON laf.track_source_id = ri.track_source_id
+        LEFT JOIN hosted_audio_files haf
+          ON haf.track_source_id = ri.track_source_id
         WHERE rr.recommendation_run_id = (
             SELECT MAX(recommendation_run_id)
             FROM recommendation_runs
@@ -389,8 +384,7 @@ def latest_recommendations() -> list[dict[str, Any]]:
             t.track_id,
             t.title,
             ri.track_source_id,
-            laf.file_path_linux,
-            laf.file_path_windows,
+            haf.file_path_linux,
             ri.reason_text
         ORDER BY ri.rank_no
     """
@@ -412,16 +406,15 @@ def random_recommendations(
             ts.track_source_id,
             LISTAGG(a.name, ', ') WITHIN GROUP (ORDER BY ta.artist_order) AS artist,
             DBMS_RANDOM.VALUE AS random_order,
-            MAX(laf.file_path_linux) AS file_path_linux,
-            MAX(laf.file_path_windows) AS file_path_windows
+            MAX(haf.file_path_linux) AS file_path_linux
         FROM tracks t
         JOIN track_sources ts
           ON ts.track_id = t.track_id
          AND ts.source_name = 'local'
          AND ts.availability_status = 'available'
-        JOIN local_audio_files laf
-          ON laf.track_source_id = ts.track_source_id
-         AND laf.is_available = 1
+        JOIN hosted_audio_files haf
+          ON haf.track_source_id = ts.track_source_id
+         AND haf.is_available = 1
         JOIN track_artists ta
           ON ta.track_id = t.track_id
         JOIN artists a
@@ -446,8 +439,7 @@ def random_recommendations(
             track_source_id,
             artist,
             random_order,
-            file_path_linux,
-            file_path_windows
+            file_path_linux
         FROM deduped_tracks
         WHERE source_rank = 1
         ORDER BY DBMS_RANDOM.VALUE
@@ -466,7 +458,7 @@ def random_recommendations(
 def track_audio(track_source_id: int) -> FileResponse:
     sql = """
         SELECT file_path_linux
-        FROM local_audio_files
+        FROM hosted_audio_files
         WHERE track_source_id = :track_source_id
           AND is_available = 1
     """
@@ -482,11 +474,7 @@ def track_audio(track_source_id: int) -> FileResponse:
     if not path.is_file():
         raise HTTPException(
             status_code=404,
-            detail=(
-                "Audio file is not on the API server. "
-                "Run the preview on the machine that has the file, or add a "
-                "gerbera-side playback service."
-            ),
+            detail="Hosted audio file is missing on server",
         )
 
     media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"

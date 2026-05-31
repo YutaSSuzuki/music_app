@@ -1,49 +1,46 @@
 # Audio Delivery
 
-現行アプリでは、DBの `local_audio_files.file_path_linux` / `file_path_windows` にローカルPC前提のパスが入っています。
+クラウド版では、所有しているローカル音源をすべてPython EC2へ転送して配信します。
+gerbera上の音声APIは使用しません。
 
-クラウドで音を出すには、以下のどちらかが必要です。
+## Audio Directory
 
-## Option A: Python EC2へ音源を置く
-
-最初の確認ではこの方式が簡単です。
-
-例:
+Python EC2上の配置先:
 
 ```text
-/data/music/...
+/data/music-app/audio/<track_source_id>.<ext>
 ```
 
-DBの `local_audio_files.file_path_linux` をPython EC2上の実パスへ更新します。
+## Database
 
-メリット:
+音源パスは `hosted_audio_files` に登録します。
 
-- 今のFastAPIの `/tracks/{track_source_id}/audio` を使いやすい
-- S3や署名付きURLの設計が不要
+```bash
+sqlplus music_app_v2/<password>@//<oracle-ec2-private-ip>:1521/FREEPDB1 \
+  @sql/003_hosted_audio_files.sql
+```
 
-注意:
+主要列:
 
-- EBS容量が必要
-- 音源バックアップを考える必要がある
+```text
+track_source_id
+track_id
+file_path_linux
+file_size_bytes
+is_available
+```
 
-## Option B: S3へ音源を置く
+## Delivery API
 
-後段の本格運用向けです。
+ブラウザはPython EC2のFastAPIから音源を取得します。
 
-DBにはローカルパスではなくS3 keyを持たせ、APIで署名付きURLを発行する設計に変えます。
+```text
+GET /tracks/{track_source_id}/audio
+```
 
-メリット:
+FastAPIは `hosted_audio_files.file_path_linux` を参照してファイルを返します。
+HTTP Range requestによる部分配信に対応します。
 
-- Lambda/API Gateway化しやすい
-- 音源ファイルをEC2に置かなくてよい
+## Setup
 
-注意:
-
-- DBスキーマまたは追加テーブルの変更が必要
-- ブラウザ再生URLの作り方を変える必要がある
-
-## 最初の推奨
-
-まずはOption Aで、Python EC2上に少数の音源だけ置いて再生確認します。  
-全曲移行は、DB/API/画面が動いた後で実施します。
-
+音源転送、DB登録、検証手順は `docs/09_hosted_audio_cloud_setup.md` を参照してください。

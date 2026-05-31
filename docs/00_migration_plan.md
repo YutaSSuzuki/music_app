@@ -22,7 +22,7 @@ Python EC2:
   optional audio files
 
 Oracle EC2:
-  Oracle Database Free container
+  Oracle AI Database 26ai Free RPM installation
   music_app_v2 schema
 ```
 
@@ -60,4 +60,3 @@ APIをLambdaへ移します。
 ## Phase 4: 音声ファイルのクラウド化
 
 必要であれば音源をS3へ移し、DBにS3 object keyや署名付きURL生成用情報を持たせます。
-

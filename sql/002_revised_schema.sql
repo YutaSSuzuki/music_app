@@ -71,30 +71,6 @@ CREATE INDEX idx_track_sources_source ON track_sources (source_name);
 CREATE INDEX idx_track_sources_normalized
     ON track_sources (source_name, normalized_title, normalized_artist);
 
-CREATE TABLE local_audio_files (
-    local_audio_file_id NUMBER(19) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    track_source_id     NUMBER(19) NOT NULL,
-    track_id            NUMBER(19) NOT NULL,
-    file_path_linux     VARCHAR(2000) NOT NULL,
-    file_path_windows   VARCHAR(2000),
-    file_name           VARCHAR(500),
-    file_ext            VARCHAR(30),
-    file_size_bytes     NUMBER(19),
-    modified_at         TIMESTAMP,
-    file_hash           VARCHAR(128),
-    is_available        NUMBER(1) DEFAULT 1 NOT NULL,
-    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT fk_local_audio_files_source
-        FOREIGN KEY (track_source_id) REFERENCES track_sources (track_source_id),
-    CONSTRAINT fk_local_audio_files_track
-        FOREIGN KEY (track_id) REFERENCES tracks (track_id),
-    CONSTRAINT uq_local_audio_files_path UNIQUE (file_path_linux),
-    CONSTRAINT ck_local_audio_files_available CHECK (is_available IN (0, 1))
-);
-
-CREATE INDEX idx_local_audio_files_track_id ON local_audio_files (track_id);
-
 CREATE TABLE play_events (
     play_event_id      NUMBER(19) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     source_name        VARCHAR(50) NOT NULL,

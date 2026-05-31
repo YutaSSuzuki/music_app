@@ -35,14 +35,36 @@ Amazon LinuxでApacheがhttpdの場合:
 sudo systemctl reload httpd
 ```
 
+Hosted audio確認:
+
+```bash
+cd /opt/music-app/oracle/cloud_lift
+. app/.venv/bin/activate
+set -a
+. app/.env
+set +a
+python3 deploy/python_ec2/check_hosted_audio.py
+```
+
 ## Oracle EC2
 
 ```bash
-docker ps
-docker logs -f oracle-free
+sudo /etc/init.d/oracle-free-26ai status
+sudo ss -ltnp | grep 1521
 ```
 
-DB件数確認:
+DBリスナー確認:
+
+```bash
+sudo su - oracle
+export ORACLE_SID=FREE
+export ORAENV_ASK=NO
+. /opt/oracle/product/26ai/dbhomeFree/bin/oraenv
+
+sqlplus system@//localhost:1521/FREEPDB1
+```
+
+DB件数確認はPython EC2から実行:
 
 ```bash
 cd /opt/music-app/oracle/cloud_lift/app
@@ -52,4 +74,3 @@ set -a
 set +a
 python3 03_matching_recommendation/phase1_cli.py health
 ```
-

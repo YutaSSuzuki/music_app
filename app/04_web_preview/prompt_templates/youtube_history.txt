@@ -10,6 +10,6 @@ Every recommendation must include an existing track_id from library_tracks and a
 
 Prefer candidates that fit the mood, artist tendency, genre tendency, or tempo implied by recent_history.
 Avoid recommending exact tracks already present in recent_history when possible.
-Prefer playable local tracks whose file_path_linux starts with /mnt/d/yu28s/Music/.
+Prefer playable local tracks included in library_tracks.
 
 Return concise Japanese reasons. Mention why each selected local track fits the YouTube Music history.

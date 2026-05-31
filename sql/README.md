@@ -22,6 +22,7 @@
 - `001_initial_schema.sql`: 初期PoC DDL
 - `002_revised_schema.sql`: 双方向推薦に対応する改訂DDL
 - `003_seed_phase1_mock.sql`: 改訂DDL用の最小モックデータ
+- `003_hosted_audio_files.sql`: Web APIサーバー自身から配信する音源パスの追加DDL
 
 ## 改訂構成
 
@@ -33,9 +34,9 @@
 - `artists`: アーティスト
 - `track_artists`: 曲とアーティストの対応
 - `track_sources`: 曲が存在する場所。`local`, `youtube_music`, `sony_music_center`
-- `local_audio_files`: ローカルファイルの実体。DドライブはWSLでは `/mnt/d/...`
 - `play_events`: 再生履歴。YouTube Music、ローカル、Sonyなどを `source_name` で区別
 - `track_features`: BPM、キー、ジャンルなど
 - `track_tags`: 任意タグ
 - `recommendation_runs`: 推薦実行単位
 - `recommendation_items`: 推薦された曲
+- `hosted_audio_files`: Python EC2から配信する所有音源ファイル

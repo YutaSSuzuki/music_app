@@ -2,6 +2,9 @@
 
 取得日: 2026-05-29
 
+この資料はクラウド移行前のzephy断面です。クラウド版では
+`local_audio_files` とgerbera音声APIを使用しません。
+
 zephy側の現行DB状態:
 
 ```json
@@ -30,4 +33,3 @@ Apache:
 ```
 
 EC2移行時はこの構成をPython EC2に再現します。
-

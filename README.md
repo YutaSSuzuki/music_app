@@ -13,12 +13,12 @@ Python EC2
   - Apache
   - FastAPI / uvicorn
   - OpenAI API call
-  - optional audio files
+  - hosted audio files
   |
   | Oracle Net 1521
   v
 Oracle EC2
-  - Oracle Database Free
+  - Oracle AI Database 26ai Free RPM installation
 ```
 
 この段階でWeb画面、DB接続、AI推薦、YouTube履歴取り込み、音声配信まで確認します。  
@@ -32,8 +32,9 @@ cloud_lift/
   data/                        local library registration ledger
   deploy/
     python_ec2/                Apache/systemd/env/bootstrap examples
-    oracle_ec2/                Oracle container examples
+    oracle_ec2/                Oracle Linux 9 RPM setup and legacy container examples
     client/                    Windows client helper
+    source/                    source audio manifest helper
   docs/                        migration documents
   sql/                         Oracle schema SQL
 ```
@@ -49,6 +50,7 @@ cloud_lift/
 - YouTube履歴のDry run/importが動く
 - OpenAI APIキー設定後にAI推薦が動く
 - 音声ファイルをPython EC2から配信できる
+- Python EC2上の音源だけを候補にしてAI推薦できる
 
 ## Important Files
 
@@ -56,8 +58,10 @@ cloud_lift/
 - Web UI: `app/04_web_preview/static/index.html`
 - Recommendation logic: `app/03_matching_recommendation/phase1_cli.py`
 - YouTube import: `app/01_youtube_history/youtube_takeout_import.py`
-- Local audio API: `app/05_local_audio_server/app.py`
 - DB schema: `sql/002_revised_schema.sql`
+- Hosted audio schema: `sql/003_hosted_audio_files.sql`
+- Hosted audio cloud guide: `docs/09_hosted_audio_cloud_setup.md`
+- Tested zephy hosted state: `docs/10_zephy_hosted_audio_state.md`
 - Python EC2 guide: `docs/02_python_ec2_setup.md`
 - Oracle EC2 guide: `docs/01_oracle_ec2_setup.md`
 - Migration order: `docs/00_migration_plan.md`
@@ -72,4 +76,3 @@ cloud_lift/
 - YouTube Takeout raw `watch-history.json`
 - 音源ファイル本体
 - Oracle database dump containing personal history, unless private repository/storage is used
-

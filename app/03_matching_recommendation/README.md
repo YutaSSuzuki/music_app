@@ -36,7 +36,7 @@ python 03_matching_recommendation/phase1_cli.py health
   "database_user": "MUSIC_APP",
   "tracks": 4,
   "track_sources": 8,
-  "local_audio_files": 4,
+  "hosted_audio_files": 4,
   "youtube_music_events": 4,
   "matched_youtube_music_events": 4
 }

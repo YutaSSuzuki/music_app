@@ -290,7 +290,7 @@
     <main>
       <header>
         <div>
-          <h1>Recommendation Preview</h1>
+          <h1>Music Recommendation Preview</h1>
         </div>
         <div class="actions">
           <button type="button" id="run">Run Recommendation</button>
@@ -299,8 +299,7 @@
         </div>
       </header>
       <div class="local-note">
-        Audio playback uses the gerbera local server at http://127.0.0.1:8765.
-        音が出ない場合は、gerberaでローカル音声サーバーを起動し、DB上のパスがgerberaから見えるパスか確認してください。
+        Audio playback uses files hosted on the Web API server.
       </div>
       <div id="startup-status" class="startup-status"></div>
       <section class="prompt-panel">
@@ -355,7 +354,6 @@
     </main>
 
     <script>
-      const localAudioBaseUrl = "http://127.0.0.1:8765";
       const appBasePath = window.location.pathname.startsWith("/music")
         ? "/music"
         : "";
@@ -463,17 +461,11 @@
           reason.textContent = text(item.reason);
           card.appendChild(reason);
 
-          const path = document.createElement("div");
-          path.className = "path";
-          path.textContent = item.file_path_windows || item.file_path_linux || "";
-          card.appendChild(path);
-
-          const playablePath = item.file_path_linux || item.file_path_windows;
-          if (playablePath) {
+          if (item.audio_url) {
             const audio = document.createElement("audio");
             audio.controls = true;
             audio.preload = "metadata";
-            audio.src = `${localAudioBaseUrl}/audio?path=${encodeURIComponent(playablePath)}`;
+            audio.src = apiPath(item.audio_url);
             card.appendChild(audio);
             audioElements.push(audio);
           }
