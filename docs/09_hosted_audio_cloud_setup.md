@@ -17,9 +17,16 @@ Python EC2上の音源パスは `hosted_audio_files` に登録します。
 Python EC2:
 
 - inbound TCP 80: 利用するIP範囲のみ
-- inbound TCP 22: 管理元IPのみ
-- outbound TCP 1521: Oracle EC2
-- outbound TCP 443: OpenAI API
+- inbound SSH管理ポート: 管理元IPのみ
+- outbound TCP 1521: Oracle EC2のprivate IP
+- outbound TCP 443: `0.0.0.0/0`
+
+Ubuntuで `ufw` がactiveの場合:
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw status
+```
 
 現状の配信APIにはログイン機能がありません。  
 インターネット全体へTCP 80を公開しないでください。
@@ -41,7 +48,7 @@ Python EC2で音源配置先を作ります。
 
 ```bash
 sudo mkdir -p /data/music-app/audio
-sudo chown -R ec2-user:ec2-user /data/music-app
+sudo chown -R ubuntu:ubuntu /data/music-app
 ```
 
 `app/.env` に配置先を設定します。
@@ -56,6 +63,33 @@ HOSTED_AUDIO_ROOT=/data/music-app/audio
 
 ```text
 track_source_id<TAB>track_id<TAB>original_path
+```
+
+`original_path` は転送元でのみ使用します。zephyから転送する場合は、
+zephy上の `/home/codex/work/oracle/hosted_audio/...` です。このパスをOracle EC2へ
+dumpで引き継ぎません。
+
+zephy DBからTSVを出力するSQL*Plusコマンド:
+
+```bash
+sqlplus -s music_app_v2/<password>@//localhost:1521/FREEPDB1 <<'SQL'
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 4000
+SET TRIMSPOOL ON
+SET TAB OFF
+SPOOL /tmp/hosted_audio_manifest_db.tsv
+SELECT
+    track_source_id || CHR(9) ||
+    track_id || CHR(9) ||
+    file_path_linux
+FROM hosted_audio_files
+WHERE is_available = 1
+ORDER BY track_source_id;
+SPOOL OFF
+EXIT
+SQL
 ```
 
 転送元端末へTSVを置き、実ファイルの存在確認と容量取得を行います。
@@ -87,7 +121,7 @@ while IFS=$'\t' read -r source_id track_id source_path bytes; do
   ext="${source_path##*.}"
   rsync -av --progress \
     "$source_path" \
-    "ec2-user@<python-ec2>:/data/music-app/audio/${source_id}.${ext}"
+    "ubuntu@<python-ec2>:/data/music-app/audio/${source_id}.${ext}"
 done < /tmp/hosted_audio_manifest.tsv
 ```
 
@@ -97,7 +131,7 @@ manifestもPython EC2へ転送します。
 
 ```bash
 scp /tmp/hosted_audio_manifest.tsv \
-  ec2-user@<python-ec2>:/tmp/hosted_audio_manifest.tsv
+  ubuntu@<python-ec2>:/tmp/hosted_audio_manifest.tsv
 ```
 
 ## 6. Register
@@ -105,8 +139,8 @@ scp /tmp/hosted_audio_manifest.tsv \
 Python EC2で実行します。
 
 ```bash
-cd /opt/music-app/oracle/cloud_lift
-. app/.venv/bin/activate
+cd /home/ubuntu/music_app
+. .venv/bin/activate
 set -a
 . app/.env
 set +a
@@ -121,11 +155,17 @@ processed=<transferred files> missing=0 available=<registered files>
 
 再実行しても、既存行は `MERGE` で更新されます。
 
+登録時に `file_path_linux` はPython EC2の配置先へ置き換わります。
+
+```text
+/data/music-app/audio/<track_source_id>.<ext>
+```
+
 ## 7. Check
 
 ```bash
-cd /opt/music-app/oracle/cloud_lift
-. app/.venv/bin/activate
+cd /home/ubuntu/music_app
+. .venv/bin/activate
 set -a
 . app/.env
 set +a
@@ -157,3 +197,13 @@ http://<python-ec2-public-ip>/music/
 ```text
 OPENAI_API_KEY=<your-key>
 ```
+
+接続確認:
+
+```bash
+curl -sS -o /dev/null -w 'http_code=%{http_code}\n' \
+  --max-time 8 https://api.openai.com/v1/models
+```
+
+APIキーなしのcurlでは `401` が正常です。タイムアウトする場合は、AP EC2の
+Outbound TCP 443、Network ACL、ルートテーブルを確認します。

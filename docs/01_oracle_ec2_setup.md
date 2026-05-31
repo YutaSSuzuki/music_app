@@ -94,12 +94,28 @@ sudo su - oracle
 export ORACLE_SID=FREE
 export ORAENV_ASK=NO
 . /opt/oracle/product/26ai/dbhomeFree/bin/oraenv
+export NLS_LANG=.AL32UTF8
 ```
 
 PDBへ接続します。
 
 ```bash
 sqlplus system@//localhost:1521/FREEPDB1
+```
+
+`NLS_LANG=.AL32UTF8` は、UTF-8で保存したSQLファイル内の日本語を文字化けさせない
+ために必要です。毎回入力しないよう、`oracle` ユーザーの `~/.bash_profile` に
+追加します。
+
+```bash
+cat >> ~/.bash_profile <<'EOF'
+export ORACLE_SID=FREE
+export ORAENV_ASK=NO
+. /opt/oracle/product/26ai/dbhomeFree/bin/oraenv
+export NLS_LANG=.AL32UTF8
+EOF
+
+. ~/.bash_profile
 ```
 
 ## 6. Application User
@@ -114,8 +130,12 @@ ALTER USER music_app_v2 QUOTA UNLIMITED ON USERS;
 
 DDLを適用します。
 
+`<repository-root>` は `sql/` ディレクトリを含むGit clone先です。Oracle EC2へ
+SQLファイルだけ転送した場合は、`@/home/oracle/002_revised_schema.sql` のように
+絶対パスを指定します。
+
 ```bash
-cd /opt/music-app/oracle/cloud_lift
+cd <repository-root>
 sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
   @sql/002_revised_schema.sql
 sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
@@ -124,13 +144,195 @@ sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
 
 zephyのdumpを復元する場合は、dumpに含まれるテーブルを再作成しません。
 
-## 7. DB Data Migration
+DDL適用結果を確認します。
+
+```bash
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1
+```
+
+```sql
+SET LINESIZE 200
+SET PAGESIZE 100
+
+SELECT table_name
+FROM user_tables
+ORDER BY table_name;
+
+SELECT column_id, column_name, data_type, nullable
+FROM user_tab_columns
+WHERE table_name = 'HOSTED_AUDIO_FILES'
+ORDER BY column_id;
+
+SELECT constraint_name, constraint_type, status
+FROM user_constraints
+WHERE table_name = 'HOSTED_AUDIO_FILES'
+ORDER BY constraint_name;
+
+SELECT index_name, status
+FROM user_indexes
+WHERE table_name = 'HOSTED_AUDIO_FILES'
+ORDER BY index_name;
+
+EXIT
+```
+
+最低限、次のテーブルが表示されることを確認します。
+
+```text
+ARTISTS
+HOSTED_AUDIO_FILES
+PLAY_EVENTS
+RECOMMENDATION_ITEMS
+RECOMMENDATION_RUNS
+TRACKS
+TRACK_ARTISTS
+TRACK_FEATURES
+TRACK_SOURCES
+TRACK_TAGS
+```
+
+## 7. Three-Track Smoke Test
+
+全件dumpを投入する前に、次の3曲のみでDB接続と音声配信を確認します。
+
+| file | title | artist | bytes |
+| --- | --- | --- | ---: |
+| `sample-001.m4a` | 二人スケッチ | Rin'ca | 4475110 |
+| `sample-002.m4a` | ファイトソング | Eve | 7558349 |
+| `sample-003.mp3` | Girl meets Love | 片霧烈火&鈴湯 | 4057429 |
+
+音源はPython EC2へ置きます。Oracle EC2やzephy固有のパスはDBへ登録しません。
+
+```text
+/data/music-app/audio/sample-001.m4a
+/data/music-app/audio/sample-002.m4a
+/data/music-app/audio/sample-003.mp3
+```
+
+Python EC2で配置先を作ります。
+
+```bash
+sudo mkdir -p /data/music-app/audio
+sudo chown -R ubuntu:ubuntu /data/music-app
+```
+
+音源を持つ端末から3曲を転送します。WSLから実行する例:
+
+```bash
+scp \
+  '/mnt/d/yu28s/Music/music_centor/Compilations/あざらしそふと コンプリートアルバム2[DISC-2]/2-01 二人スケッチ.m4a' \
+  ubuntu@<python-ec2-public-ip>:/data/music-app/audio/sample-001.m4a
+
+scp \
+  '/mnt/d/yu28s/Music/Eve/ファイトソング - Single/01 ファイトソング.m4a' \
+  ubuntu@<python-ec2-public-ip>:/data/music-app/audio/sample-002.m4a
+
+scp \
+  '/mnt/d/yu28s/Music/music_centor/Compilations/EGG-Extra Games Garden- anthology 2015/03 Girl meets Love.mp3' \
+  ubuntu@<python-ec2-public-ip>:/data/music-app/audio/sample-003.mp3
+```
+
+Oracle EC2でサンプル行を登録します。
+
+```bash
+cd <repository-root>
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/004_seed_cloud_smoke_test.sql
+```
+
+SQLファイルでは `SET DEFINE OFF` を指定しています。これは、
+`片霧烈火&鈴湯` に含まれる `&` をSQL*Plusの置換変数として解釈させないためです。
+また、実行前に `echo "$NLS_LANG"` が `.AL32UTF8` であることを確認します。
+
+既に日本語が `???` になったサンプル行を登録済みの場合は、一度削除してから
+再登録します。
+
+```bash
+echo "$NLS_LANG"
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/005_delete_cloud_smoke_test.sql
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/004_seed_cloud_smoke_test.sql
+```
+
+日本語を含むSQLファイルを単発実行する場合は、次のラッパーも使用できます。
+
+```bash
+deploy/oracle_ec2/sqlplus_utf8.sh \
+  music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/004_seed_cloud_smoke_test.sql
+```
+
+登録結果:
+
+```bash
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1
+```
+
+```sql
+SELECT
+    ts.source_track_id,
+    t.title,
+    haf.file_path_linux,
+    haf.file_size_bytes
+FROM track_sources ts
+JOIN tracks t ON t.track_id = ts.track_id
+JOIN hosted_audio_files haf ON haf.track_source_id = ts.track_source_id
+WHERE ts.source_track_id LIKE 'cloud-smoke-test-%'
+ORDER BY ts.source_track_id;
+
+EXIT
+```
+
+Python EC2でファイル実体とAPIを確認します。
+
+```bash
+ls -lh /data/music-app/audio/sample-*
+curl http://127.0.0.1:8000/api/recommendations/random?limit=3
+```
+
+レスポンスに含まれる `audio_url` を使って部分配信を確認します。
+
+```bash
+curl --range 0-1023 \
+  http://127.0.0.1:8000/tracks/<track_source_id>/audio \
+  --output /dev/null --verbose
+```
+
+HTTPステータス `206 Partial Content` になれば部分配信に成功しています。
+
+ブラウザからも再生を確認します。
+
+```text
+http://<python-ec2-public-ip>/music/
+```
+
+全件移行前にサンプル行を削除します。
+
+```bash
+cd <repository-root>
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
+  @sql/005_delete_cloud_smoke_test.sql
+```
+
+`REMAINING_CLOUD_SMOKE_TEST_ROWS` が `0` であることを確認します。
+
+Python EC2からサンプル音源も削除します。
+
+```bash
+rm /data/music-app/audio/sample-001.m4a \
+   /data/music-app/audio/sample-002.m4a \
+   /data/music-app/audio/sample-003.mp3
+```
+
+## 8. DB Data Migration
 
 zephyでData Pump dumpを作成し、Oracle EC2へprivateな経路で転送します。
 dumpにはYouTube履歴やローカル音源パスが含まれるため、GitHubへ登録しません。
 
-クラウド版では旧 `LOCAL_AUDIO_FILES` テーブルを使用しません。zephyからexportする際に
-除外します。
+クラウド版では旧 `LOCAL_AUDIO_FILES` テーブルを使用しません。また、
+`HOSTED_AUDIO_FILES` にはzephy固有のパスが入っているため、dumpから除外します。
+Python EC2へ音源を転送した後に登録スクリプトで再生成します。
 
 ```bash
 expdp music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
@@ -138,7 +340,7 @@ expdp music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
   directory=DATA_PUMP_DIR \
   dumpfile=music_app_v2_cloud.dmp \
   logfile=music_app_v2_cloud_exp.log \
-  exclude=TABLE:\"IN \(\'LOCAL_AUDIO_FILES\'\)\"
+  exclude=TABLE:\"IN \(\'LOCAL_AUDIO_FILES\',\'HOSTED_AUDIO_FILES\'\)\"
 ```
 
 Oracle EC2でData Pumpディレクトリを確認します。
@@ -148,6 +350,7 @@ sudo su - oracle
 export ORACLE_SID=FREE
 export ORAENV_ASK=NO
 . /opt/oracle/product/26ai/dbhomeFree/bin/oraenv
+export NLS_LANG=.AL32UTF8
 
 sqlplus / as sysdba
 ```
@@ -170,12 +373,44 @@ impdp music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1 \
   schemas=music_app_v2 \
   directory=DATA_PUMP_DIR \
   dumpfile=music_app_v2_cloud.dmp \
-  logfile=music_app_v2_imp.log
+  logfile=music_app_v2_imp.log \
+  content=DATA_ONLY \
+  table_exists_action=APPEND
 ```
 
-移行方法によっては、import前にユーザー作成や `REMAP_SCHEMA` が必要です。
+先にDDLを適用済みのため、`content=DATA_ONLY` でデータのみを投入します。
+サンプルデータが残っている状態では実行しません。移行方法によっては、import前に
+ユーザー作成や `REMAP_SCHEMA` が必要です。
 
-## 8. Python EC2 Connection
+import後に件数を確認します。
+
+この時点の `HOSTED_AUDIO_FILES` は `0` 件が正常です。全音源をPython EC2へ
+転送した後、`docs/09_hosted_audio_cloud_setup.md` の登録スクリプトで再生成します。
+
+```bash
+sqlplus music_app_v2/<application-db-password>@//localhost:1521/FREEPDB1
+```
+
+```sql
+SET LINESIZE 200
+SET PAGESIZE 100
+
+SELECT 'TRACKS' AS table_name, COUNT(*) AS row_count FROM tracks
+UNION ALL
+SELECT 'TRACK_SOURCES', COUNT(*) FROM track_sources
+UNION ALL
+SELECT 'HOSTED_AUDIO_FILES', COUNT(*) FROM hosted_audio_files
+UNION ALL
+SELECT 'PLAY_EVENTS', COUNT(*) FROM play_events
+UNION ALL
+SELECT 'RECOMMENDATION_RUNS', COUNT(*) FROM recommendation_runs
+UNION ALL
+SELECT 'RECOMMENDATION_ITEMS', COUNT(*) FROM recommendation_items;
+
+EXIT
+```
+
+## 9. Python EC2 Connection
 
 Python EC2の `app/.env` にOracle EC2のprivate IPを設定します。
 
@@ -188,8 +423,9 @@ ORACLE_DSN=<oracle-ec2-private-ip>:1521/FREEPDB1
 Python EC2から確認します。
 
 ```bash
-cd /opt/music-app/oracle/cloud_lift/app
+cd /home/ubuntu/music_app
 . .venv/bin/activate
+cd app
 set -a
 . ./.env
 set +a

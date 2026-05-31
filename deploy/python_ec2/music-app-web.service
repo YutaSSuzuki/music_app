@@ -5,11 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ec2-user
-Group=ec2-user
-WorkingDirectory=/opt/music-app/oracle/cloud_lift/app
-EnvironmentFile=-/opt/music-app/oracle/cloud_lift/app/.env
-ExecStart=/opt/music-app/oracle/cloud_lift/app/.venv/bin/uvicorn 04_web_preview.app:app --host 127.0.0.1 --port 8000
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/music_app/app
+EnvironmentFile=/home/ubuntu/music_app/app/.env
+ExecStart=/home/ubuntu/music_app/.venv/bin/uvicorn 04_web_preview.app:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 RestartSec=5
 

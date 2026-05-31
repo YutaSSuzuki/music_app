@@ -19,7 +19,7 @@ Python EC2:
   FastAPI
   uvicorn systemd
   application files
-  optional audio files
+  hosted audio files
 
 Oracle EC2:
   Oracle AI Database 26ai Free RPM installation

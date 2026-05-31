@@ -12,6 +12,7 @@ from typing import Any
 
 import oracledb
 from fastapi import FastAPI, HTTPException, Query
+from openai import APIConnectionError, APITimeoutError
 from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 
@@ -326,12 +327,29 @@ def run_recommendations(payload: RunRecommendationPayload) -> dict[str, Any]:
         f"Return exactly {payload.max_recommendations} recommendation(s) if enough valid candidates exist."
     )
     context["constraints"].append("Do not return the same track_id more than once.")
-    recommendations = recommend_with_openai(
-        context,
-        payload.model,
-        prompt,
-        payload.max_recommendations,
-    )
+    try:
+        recommendations = recommend_with_openai(
+            context,
+            payload.model,
+            prompt,
+            payload.max_recommendations,
+        )
+    except APITimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "OpenAI API request timed out. Check AP EC2 outbound TCP 443, "
+                "the Network ACL, and the route table."
+            ),
+        ) from exc
+    except APIConnectionError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Could not connect to the OpenAI API. Check AP EC2 outbound "
+                "TCP 443, DNS, the Network ACL, and the route table."
+            ),
+        ) from exc
     result = validate_recommendations(context, dedupe_recommendations(recommendations))
     if not result["validation"]["valid"]:
         raise HTTPException(

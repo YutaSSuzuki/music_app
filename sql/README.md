@@ -23,6 +23,8 @@
 - `002_revised_schema.sql`: 双方向推薦に対応する改訂DDL
 - `003_seed_phase1_mock.sql`: 改訂DDL用の最小モックデータ
 - `003_hosted_audio_files.sql`: Web APIサーバー自身から配信する音源パスの追加DDL
+- `004_seed_cloud_smoke_test.sql`: クラウド疎通確認用の3曲
+- `005_delete_cloud_smoke_test.sql`: 疎通確認用3曲の削除
 
 ## 改訂構成
 

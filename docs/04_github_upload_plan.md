@@ -22,20 +22,16 @@
 ## EC2から取り込む流れ
 
 ```bash
-sudo mkdir -p /opt/music-app
-sudo chown -R ec2-user:ec2-user /opt/music-app
-cd /opt/music-app
-git clone <YOUR_REPOSITORY_URL> oracle
-cd oracle/cloud_lift
+cd /home/ubuntu
+git clone <YOUR_REPOSITORY_URL> music_app
+cd music_app
 ```
 
 その後:
 
 ```bash
-cd app
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -r 04_web_preview/requirements.txt
-pip install -r 03_matching_recommendation/requirements.txt
+pip install -r app/04_web_preview/requirements.txt
+pip install -r app/03_matching_recommendation/requirements.txt
 ```
-
