@@ -47,7 +47,7 @@ from phase1_cli import (  # noqa: E402
 )
 from youtube_takeout_import import import_takeout_content  # noqa: E402
 
-app = FastAPI(title="Music Recommendation Preview")
+app = FastAPI(title="Music App")
 
 
 class PromptPayload(BaseModel):

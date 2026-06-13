@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Music Recommendation Preview</title>
+    <title>Music App</title>
     <style>
       :root {
         color-scheme: light;
@@ -290,7 +290,7 @@
     <main>
       <header>
         <div>
-          <h1>Music Recommendation Preview</h1>
+          <h1>Music App</h1>
         </div>
         <div class="actions">
           <button type="button" id="run">Run Recommendation</button>
@@ -298,9 +298,6 @@
           <button type="button" id="reload">Reload</button>
         </div>
       </header>
-      <div class="local-note">
-        Audio playback uses files hosted on the Web API server.
-      </div>
       <div id="startup-status" class="startup-status"></div>
       <section class="prompt-panel">
         <h2>Prompt</h2>
@@ -416,11 +413,7 @@
           ? "OpenAI API key: configured"
           : "OpenAI API key: missing";
 
-        const dbPill = document.createElement("span");
-        dbPill.className = "status-pill ok";
-        dbPill.textContent = `Oracle: ${data.oracle_user} ${data.oracle_dsn}`;
-
-        startupStatusEl.replaceChildren(keyPill, dbPill);
+        startupStatusEl.replaceChildren(keyPill);
       }
 
       async function loadStartupStatus() {
