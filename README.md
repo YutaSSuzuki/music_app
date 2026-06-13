@@ -56,6 +56,7 @@ cloud_lift/
 - Oracle EC2再構築: `docs/01_oracle_ec2_setup.md`
 - AP EC2再構築: `docs/02_python_ec2_setup.md`
 - 音源の再転送とDB登録: `docs/09_hosted_audio_cloud_setup.md`
+- 手動での曲追加: `docs/11_manual_track_addition.md`
 - 日常運用: `docs/05_operation_commands.md`
 - 将来のS3/Lambda移行: `docs/06_next_lambda_s3.md`
 - 次週以降の改修バックログ: `docs/10_next_iteration_backlog.md`

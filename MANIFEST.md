@@ -24,6 +24,7 @@
 - `deploy/python_ec2/music-app-apache.conf`: Apache `/music/` reverse proxy
 - `deploy/python_ec2/music-app.env.example`: AP EC2環境変数例
 - `deploy/python_ec2/register_hosted_audio.py`: 転送済み音源のDB登録
+- `deploy/python_ec2/register_new_tracks.py`: TSVから新規曲をまとめて追加
 - `deploy/python_ec2/check_hosted_audio.py`: 音源登録とファイル実体の検証
 - `deploy/oracle_ec2/bootstrap_oracle_linux_9.sh`: RHEL 9 / Oracle Linux 9用RPMセットアップ補助
 - `deploy/oracle_ec2/sqlplus_utf8.sh`: UTF-8設定付きSQL*Plus起動
@@ -42,3 +43,4 @@
 - `docs/08_current_architecture_and_flow.md`: 構成と処理フロー
 - `docs/09_hosted_audio_cloud_setup.md`: 音源の再転送とDB登録
 - `docs/10_next_iteration_backlog.md`: 次週以降の構成改善と機能追加
+- `docs/11_manual_track_addition.md`: 画面未実装時の手動曲追加手順
